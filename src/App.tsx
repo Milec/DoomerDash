@@ -59,7 +59,7 @@ export default function App() {
   return (
     <Shell>
       <HowToRead data={data} />
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {data.failure_modes.map((mode) => (
           <CompositeCard
             key={mode.slug}
@@ -110,7 +110,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[15px] font-semibold tracking-tight text-ink">DoomerDash</h1>
         <p className="max-w-xl text-[11px] leading-snug text-ink-muted">
-          Five ways things break, each measured against its own history. Higher always means worse.
+          Six ways things break, each measured against its own history. Higher always means worse.
         </p>
       </header>
       <main className="mx-auto max-w-[1600px]">{children}</main>

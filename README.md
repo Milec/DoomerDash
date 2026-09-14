@@ -10,8 +10,8 @@ distribution**, direction-normalized so that **positive always means worse**.
 Raw values are secondary. The dashboard answers one question per panel: *is this
 getting worse relative to its own history?*
 
-**Phase 2 is live.** 32 indicators across six sources — FRED, EIA, IMF
-PortWatch, NOAA/NSIDC, FAO and USBR — filling all five failure modes.
+**Live: 38 indicators across eight sources** — FRED, EIA, IMF PortWatch, NOAA,
+NASA, FAO, USBR and the US Drought Monitor — across six failure modes.
 
 Every reading is shown twice: as a plain sentence ("worse than 94% of the past
 decade") and as a score for people who want one. The percentile is the empirical
@@ -280,13 +280,35 @@ or the suite skips.
 | **FRED** | yes | 18 — rates, spreads, inflation, labour, plus the NY Fed ACM term premium and two policy-uncertainty indices |
 | **EIA v2** | yes | 5 — SPR level, retail diesel, crude and distillate stocks, and the **derived** diesel crack spread |
 | **IMF PortWatch** | no | 4 — daily transits through Hormuz, Suez, Bab el-Mandeb and Panama |
-| **NOAA / NSIDC** | no | 2 — Mauna Loa CO₂, Arctic sea ice extent |
+| **NOAA / NSIDC / PSL** | no | 6 — CO₂, methane, nitrous oxide, Arctic and Antarctic sea ice, ENSO |
+| **NASA GISTEMP** | no | 1 — global land-ocean temperature anomaly |
+| **US Drought Monitor** | no | 1 — share of the continental US in severe drought or worse |
 | **USBR** | no | 2 — Lake Mead and Lake Powell storage |
 | **FAO** | no | 1 — Food Price Index |
 
 The NY Fed ACM term premium needed no connector at all: FRED publishes it as
 `THREEFYTP10`, so it was a database insert. That is the connector interface
 working as intended.
+
+### The sixth bucket: Climate & Ecology
+
+`physical_resource` had become an energy bucket with two climate points bolted
+on. Deepening the environmental coverage would have made that worse: averaging
+CO₂ — which moves glacially and sits permanently near its own maximum — with the
+diesel crack spread yields a composite that describes neither. They answer
+different questions on different timescales, so they were split:
+
+- **Physical Resource** — near-term supply: fuel, food, water in storage.
+- **Climate & Ecology** — greenhouse gases, global temperature, both poles' sea
+  ice, ENSO and drought.
+
+The split sharpened both: Physical Resource moved from +1.69 to +1.94 once the
+slow trends stopped diluting it.
+
+**ENSO is stored as an absolute value.** El Niño and La Niña are opposite signs
+but both disrupt rainfall, harvests and fisheries, so scoring the raw signed
+anomaly would report a severe La Niña as the calmest possible reading. What
+carries risk is distance from neutral, in either direction.
 
 ### Seasonal comparison
 
@@ -303,11 +325,13 @@ history, just the part of it that is comparable.
   redistributing the data from a public URL. Left out rather than shipped in
   breach of terms. The spec said to check before exposing it publicly; this is
   the result of checking.
-- **Daily global sea surface temperature** — the usual free feed (Climate
-  Reanalyzer's `oisst2.1` JSON) stopped updating in September 2024, and its other
-  filenames now redirect to the site root. Shipping a series two years behind as
-  a daily indicator is precisely the failure this dashboard exists to avoid, so
-  it needs a live replacement first.
+- **Daily global sea surface temperature** — Climate Reanalyzer's `oisst2.1`
+  JSON stopped updating in September 2024 and CPC's weekly SST file stops in
+  January 2021. Shipping a series years behind as a daily indicator is precisely
+  the failure this dashboard exists to avoid, so it needs a live replacement.
+  The ENSO indicator covers part of the same ground meanwhile.
+- **Global sea level** — NASA's satellite altimetry file now serves an HTML page
+  rather than the data. Worth revisiting.
 - **USDA WASDE stocks-to-use** — the PSD API needs its own key and the only
   keyless path is a 2.8 MB zip, which would mean adding a decompression
   dependency. Better suited to the manual CSV route.

@@ -56,14 +56,8 @@ create or replace function doy_distance(a date, b date) returns int
   )
 $$;
 
--- Buckets that exist only so the test suite has somewhere isolated to put
--- fixtures. The composite tests previously borrowed supply_conflict because it
--- happened to be empty; Phase 2 filled it and the tests broke, correctly. The
--- isolation is now a property of the schema rather than a coincidence.
-insert into failure_modes (slug, label, subtitle, plain_question, explainer, display_order, is_visible) values
-  ('_harness',           'Test harness',              'Fixtures only', 'Does the normalization layer behave?', 'Used by the test suite. Never rendered.', 999, false),
-  ('_harness_composite', 'Test harness (composites)', 'Fixtures only', 'Does the composite rule behave?',      'Used by the test suite. Never rendered.', 998, false)
-on conflict (slug) do update set is_visible = false, display_order = excluded.display_order;
+-- Failure-mode rows, including the two invisible test-harness buckets, are
+-- seeded in 0009.
 
 revoke execute on function doy_distance(date,date), seasonal_window_days() from public;
 

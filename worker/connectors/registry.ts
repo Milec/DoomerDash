@@ -6,6 +6,8 @@ import { createPortwatchConnector } from './portwatch.ts';
 import { createNoaaConnector } from './noaa.ts';
 import { createFaoConnector } from './fao.ts';
 import { createUsbrConnector } from './usbr.ts';
+import { createNasaConnector } from './nasa.ts';
+import { createUsdmConnector } from './usdm.ts';
 
 /**
  * Sources that have a working connector. Each entry is a factory so that every
@@ -20,10 +22,10 @@ import { createUsbrConnector } from './usbr.ts';
  *   acled   Registration required, and its licence does not permit
  *           redistributing the data from a public URL. Left out of the public
  *           build rather than shipped in breach of terms.
- *   sst     Daily global sea surface temperature. The usual free feed (Climate
- *           Reanalyzer oisst2.1 JSON) stopped updating in September 2024 and
- *           its other filenames redirect to the site root. Needs a live
- *           replacement before it is worth wiring.
+ *   sst     Daily global sea surface temperature. Climate Reanalyzer's oisst2.1
+ *           JSON stopped updating in September 2024 and CPC's weekly SST file
+ *           stops in January 2021. Needs a live replacement; the ENSO indicator
+ *           covers part of the same ground in the meantime.
  *   usda    WASDE grain stocks-to-use. The PSD API needs its own key and the
  *           only keyless path is a 2.8MB zip, which would mean adding a
  *           decompression dependency. Suited to the manual CSV route instead.
@@ -38,6 +40,8 @@ const FACTORIES: Record<string, () => Connector> = {
   noaa: createNoaaConnector,
   fao: createFaoConnector,
   usbr: createUsbrConnector,
+  nasa: createNasaConnector,
+  usdm: createUsdmConnector,
 };
 
 export const CONNECTOR_SOURCES = Object.keys(FACTORIES);

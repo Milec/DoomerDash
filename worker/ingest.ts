@@ -127,8 +127,16 @@ export async function ingestSource(source: string, env: Env, full = false): Prom
       }
     }
 
+    // Postgres refuses an ON CONFLICT statement that touches the same row twice,
+    // so a source returning a date more than once would fail the entire batch
+    // rather than just itself. Collapse duplicates first, last value winning -
+    // the same rule the upsert applies across runs.
+    const deduped = [...new Map(
+      pending.map((r) => [`${r.indicator_slug}\u0000${r.obs_date}`, r]),
+    ).values()];
+
     // Phase 2: one upsert per batch, across all indicators.
-    for (const batch of chunk(pending, UPSERT_CHUNK)) {
+    for (const batch of chunk(deduped, UPSERT_CHUNK)) {
       const { error } = await db
         .from('observations')
         .upsert(batch.map((r) => ({ ...r, ingested_at: ingestedAt })), {
