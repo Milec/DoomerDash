@@ -46,7 +46,7 @@ export default function App() {
           <p className="text-[13px] font-medium text-z-warm-3">Could not load indicators</p>
           <p className="mt-1 text-[12px] text-ink-2">{state.message}</p>
           <p className="mt-2 text-[11px] text-ink-muted">
-            Nothing is shown rather than something stale or invented.
+            The dashboard stays blank until it has a reliable reading.
           </p>
         </div>
       </Shell>
@@ -76,7 +76,7 @@ export default function App() {
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <h3 className="text-[12px] font-semibold text-ink">{expanded.label}</h3>
               <p className="text-[11px] text-ink-muted">
-                higher = worse · greyed rows are out of date
+                Higher scores mean more pressure · faded rows need an update
               </p>
             </div>
             {expanded.explainer && (
@@ -87,7 +87,7 @@ export default function App() {
           </header>
           {expanded.members.length === 0 ? (
             <p className="border-t border-line px-3 py-6 text-[12px] text-ink-muted">
-              No measures are wired up for this group yet.
+              No data series have been added to this group yet.
             </p>
           ) : (
             expanded.members.map((ind) => <IndicatorRow key={ind.slug} ind={ind} />)
@@ -98,7 +98,7 @@ export default function App() {
       <CounterStrip items={data.counter_indicators} />
       <Footer data={data} />
       <p className="mt-6 text-[10px] text-ink-muted">
-        Page rendered {formatTimestamp(data.generated_at)}
+        Updated {formatTimestamp(data.generated_at)}
       </p>
     </Shell>
   );
@@ -110,7 +110,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[15px] font-semibold tracking-tight text-ink">DoomerDash</h1>
         <p className="max-w-xl text-[11px] leading-snug text-ink-muted">
-          Six ways things break, each measured against its own history. Higher always means worse.
+          A clear read on six sources of stress. Higher scores mean more pressure.
         </p>
       </header>
       <main className="mx-auto max-w-[1600px]">{children}</main>

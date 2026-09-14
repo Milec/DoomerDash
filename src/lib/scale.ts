@@ -43,9 +43,9 @@ export const zColor = (z: number | null | undefined): string => TOKENS[zTone(z)]
  * being taught anything first.
  */
 export function plainReading(pct: number | null, seasonal = false): string {
-  if (pct === null || !Number.isFinite(pct)) return 'Not enough history to score';
-  const against = seasonal ? 'at this time of year' : 'in the past decade';
-  // Rounding 99.6 to "worse than 100%" claims the reading is worse than itself.
+  if (pct === null || !Number.isFinite(pct)) return 'Not enough history for a score';
+  const against = seasonal ? 'at this time of year' : 'of the past decade';
+  // Rounding 99.6 up to "worse than 100%" claims a reading is worse than itself.
   // At the extremes, name the extreme instead of quoting a percentage.
   if (pct >= 99.5) return `Worse than any reading ${against}`;
   if (pct <= 0.5) return `Better than any reading ${against}`;

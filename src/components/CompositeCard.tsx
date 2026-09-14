@@ -12,7 +12,7 @@ const DEAD_BAND = 0.05;
 
 function Trend({ now, then }: { now: number | null; then: number | null }) {
   if (now === null || then === null) {
-    return <span className="text-[11px] text-ink-muted">no 30-day comparison yet</span>;
+    return <span className="text-[11px] text-ink-muted">no month-ago reading yet</span>;
   }
   const delta = now - then;
   const flat = Math.abs(delta) < DEAD_BAND;
@@ -22,7 +22,7 @@ function Trend({ now, then }: { now: number | null; then: number | null }) {
     <span className="inline-flex items-center gap-1 text-[11px]" style={{ color }}>
       <span aria-hidden="true">{flat ? '→' : worse ? '↑' : '↓'}</span>
       <span>
-        {flat ? 'unchanged from a month ago' : `${worse ? 'worse' : 'better'} than a month ago`}
+        {flat ? 'about the same as last month' : `${worse ? 'higher' : 'lower'} than last month`}
         {!flat && <span className="tnum"> ({delta > 0 ? '+' : ''}{delta.toFixed(2)})</span>}
       </span>
     </span>
@@ -57,7 +57,7 @@ export default function CompositeCard({ mode, expanded, onToggle }: Props) {
               {compositeWord(mode.composite_z)}
             </div>
             <div className="tnum mt-0.5 text-[11px] text-ink-muted">
-              combined score {formatZ(mode.composite_z)}
+              group score {formatZ(mode.composite_z)}
             </div>
           </>
         ) : (
@@ -71,12 +71,12 @@ export default function CompositeCard({ mode, expanded, onToggle }: Props) {
         ) : (
           <div className="text-[11px] leading-snug text-ink-muted">
             {mode.status === 'no_members'
-              ? 'No measures wired up for this group yet.'
-              : `Only ${mode.fresh_member_count} of ${mode.member_count} measures are current. That is fewer than half, so no combined score is shown rather than a misleading one.`}
+              ? 'No data series have been added yet.'
+              : `Only ${mode.fresh_member_count} of ${mode.member_count} measures are current. A group score needs at least half.`}
           </div>
         )}
         <div className="tnum text-[11px] text-ink-muted">
-          {mode.fresh_member_count}/{mode.member_count} measures current
+          {mode.fresh_member_count}/{mode.member_count} measures up to date
         </div>
       </div>
     </button>
