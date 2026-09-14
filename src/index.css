@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/*
+ * Dark only, by design. The page is an instrument panel; it does not follow the
+ * OS theme. Palette values are the validated dark-surface steps: the diverging
+ * z ramp is blue (better than its own history) to red (worse), three steps per
+ * arm around a neutral gray, all clearing 3:1 on the chart surface.
+ */
+@theme {
+  --color-page: #0b0b0a;
+  --color-surface: #12120f;
+  --color-surface-2: #1a1a17;
+  --color-line: #2c2c2a;
+
+  --color-ink: #ffffff;
+  --color-ink-2: #c3c2b7;
+  --color-ink-muted: #898781;
+
+  --color-z-cool-3: #3987e5;
+  --color-z-cool-2: #2a78d6;
+  --color-z-cool-1: #256abf;
+  --color-z-neutral: #7d7b73;
+  --color-z-warm-1: #a83c3c;
+  --color-z-warm-2: #c74444;
+  --color-z-warm-3: #e34948;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html {
+  background: var(--color-page);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Staleness is a visual state, not a footnote: past its own threshold an
+ * indicator loses its color entirely so it cannot be mistaken for a live read.
+ */
+.stale {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
