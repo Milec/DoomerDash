@@ -1,0 +1,36 @@
+name = "doomerdash"
+main = "worker/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Not a credential: the project URL is public and the anon/publishable key that
+# pairs with it is a secret below. Every actual key lives in Worker secrets.
+[vars]
+SUPABASE_URL = "https://oeekgxtqstyiudimglts.supabase.co"
+
+# Secrets (set with `wrangler secret put <NAME>`):
+#   SUPABASE_PUBLISHABLE_KEY  read path; only granted SELECT on the public views
+#   SUPABASE_SERVICE_KEY      write path; used by ingest only
+
+
+#   EIA_API_KEY               https://www.eia.gov/opendata/register.php
+#   INGEST_TOKEN              bearer token guarding POST /api/ingest
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# The Worker binds to itself so the daily cron can fan out: one invocation per
+# source, each with its own subrequest budget. Doing all six sources in a single
+# invocation exceeds Cloudflare's per-invocation subrequest cap.
+[[services]]
+binding = "SELF"
+service = "doomerdash"
+
+[triggers]
+crons = ["0 9 * * *"]
+
+[observability]
+enabled = true

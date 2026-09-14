@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `wrangler dev`. .dev.vars is gitignored.
+# In production these are set with `wrangler secret put <NAME>`.
+SUPABASE_PUBLISHABLE_KEY=""
+SUPABASE_SERVICE_KEY=""
+FRED_API_KEY=""
+INGEST_TOKEN=""
+EIA_API_KEY=""
