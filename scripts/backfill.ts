@@ -21,7 +21,8 @@ if (!CONNECTOR_SOURCES.includes(source)) {
 const env = requireEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'FRED_API_KEY']) as unknown as Env;
 
 console.log(`Backfilling ${source} ...`);
-const result = await ingestSource(source, env);
+// Backfills request full history; routine ingest only fetches a recent window.
+const result = await ingestSource(source, env, true);
 
 for (const o of result.indicators) {
   console.log(`  ${o.error ? 'FAIL' : ' ok '}  ${o.slug.padEnd(28)} ${String(o.rows).padStart(6)} rows` + (o.error ? `  ${o.error}` : ''));

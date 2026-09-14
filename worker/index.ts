@@ -50,7 +50,11 @@ async function handleIngest(request: Request, env: Env): Promise<Response> {
   if (!authorized(request, env)) {
     return json({ error: 'unauthorized' }, { status: 401 });
   }
-  const source = new URL(request.url).searchParams.get('source');
+  const params = new URL(request.url).searchParams;
+  const source = params.get('source');
+  // Full history is opt-in: routine runs only fetch a recent window, which keeps
+  // them inside the per-invocation subrequest budget.
+  const full = params.get('full') === '1';
   if (!source) {
     return json({ error: 'source parameter is required', known_sources: CONNECTOR_SOURCES }, { status: 400 });
   }
@@ -58,7 +62,7 @@ async function handleIngest(request: Request, env: Env): Promise<Response> {
     return json({ error: `unknown source "${source}"`, known_sources: CONNECTOR_SOURCES }, { status: 404 });
   }
   try {
-    const result = await ingestSource(source, env);
+    const result = await ingestSource(source, env, full);
     return json(result, { status: result.status === 'error' ? 500 : 200 });
   } catch (err) {
     return json({ source, status: 'error', error: errorMessage(err) }, { status: 500 });
@@ -95,12 +99,34 @@ export default {
     return env.ASSETS.fetch(request);
   },
 
-  /** Cron Trigger: 09:00 UTC daily (see wrangler.toml). */
+  /**
+   * Cron Trigger: 09:00 UTC daily (see wrangler.toml).
+   *
+   * Each source runs in its own invocation through the self service binding, so
+   * each gets its own subrequest budget. Running all six inline exceeds
+   * Cloudflare's per-invocation cap and silently truncates the run.
+   */
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       (async () => {
         for (const source of CONNECTOR_SOURCES) {
           try {
+            if (env.SELF) {
+              const res = await env.SELF.fetch(
+                new Request(`https://doomerdash.internal/api/ingest?source=${source}`, {
+                  method: 'POST',
+                  headers: { authorization: `Bearer ${env.INGEST_TOKEN}` },
+                }),
+              );
+              const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+              console.log(
+                `[cron ${controller.cron}] ${source}: ${body.status ?? res.status}, ` +
+                  `${body.rows_upserted ?? '?'} rows` +
+                  (body.error_text ? ` - ${String(body.error_text).slice(0, 300)}` : ''),
+              );
+              continue;
+            }
+            // No self binding (local dev): run inline.
             const result = await ingestSource(source, env);
             console.log(
               `[cron ${controller.cron}] ${source}: ${result.status}, ${result.rows_upserted} rows` +

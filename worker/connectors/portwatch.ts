@@ -41,8 +41,12 @@ export function createPortwatchConnector(): Connector {
       let offset = 0;
 
       for (let page = 0; page < MAX_PAGES; page++) {
+        // Filter by date server-side: a routine 180-day run then costs a single
+        // page instead of paging through the whole history to discard it.
+        const where =
+          `portname='${portname.replace(/'/g, "''")}' AND date >= DATE '${ctx.observationStart}'`;
         const url =
-          `${LAYER}?where=${encodeURIComponent(`portname='${portname.replace(/'/g, "''")}'`)}` +
+          `${LAYER}?where=${encodeURIComponent(where)}` +
           `&outFields=${encodeURIComponent('date,n_total')}` +
           `&orderByFields=${encodeURIComponent('date ASC')}` +
           `&returnGeometry=false&resultOffset=${offset}&resultRecordCount=${PAGE_SIZE}&f=json`;
@@ -63,7 +67,6 @@ export function createPortwatchConnector(): Connector {
               : null;
           const value = num(a.n_total as string | number | null);
           if (!obs_date || value === null) continue;
-          if (obs_date < ctx.observationStart) continue;
           out.push({ obs_date, value });
         }
 

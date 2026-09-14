@@ -22,6 +22,13 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = ["/api/*"]
 
+# The Worker binds to itself so the daily cron can fan out: one invocation per
+# source, each with its own subrequest budget. Doing all six sources in a single
+# invocation exceeds Cloudflare's per-invocation subrequest cap.
+[[services]]
+binding = "SELF"
+service = "doomerdash"
+
 [triggers]
 crons = ["0 9 * * *"]
 

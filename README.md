@@ -121,12 +121,31 @@ Then run the ingest (below). The connector reads `source_series_id` and
 from every composite. `cadence = 'manual'` is supported from day one for series
 with no feed.
 
+### Routine ingest vs backfill
+
+Routine runs fetch only a **recent window**, because Cloudflare caps subrequests
+per Worker invocation (50 on the free plan) and full-history ingest blows
+straight through it — the run comes back `partial` with half the series unscored.
+Three things keep it inside the budget:
+
+- Rows are accumulated across all of a source's indicators and upserted in a few
+  large batches, not one batch per indicator.
+- Only daily and weekly series use the short window. Low-cadence series always
+  fetch full history (an annual series is ~20 rows, and a quarterly one may
+  publish nothing at all in 180 days, which is indistinguishable from a broken
+  source). So do `yoy_pct`, `ratio` and `derived` transforms, which need a year
+  or more of lookback to produce a single value.
+- The daily cron fans out through a **service binding to itself**, one invocation
+  per source, so each source gets its own subrequest budget.
+
+Pass `?full=1` to `/api/ingest` for full history on demand.
+
 ### Backfilling history
 
-There is no separate backfill path. Ingestion always requests full history from
-`OBSERVATION_START` (2005-01-01) and upserts on `(indicator_slug, obs_date)`, so
-running it *is* the backfill — and re-running it picks up upstream revisions,
-later values winning.
+`npm run backfill` requests full history from `OBSERVATION_START` (2005-01-01)
+and upserts on `(indicator_slug, obs_date)`, so re-running it picks up upstream
+revisions with later values winning. It is the same code path as routine ingest,
+just with the window opened all the way.
 
 ```bash
 npm run backfill -- fred

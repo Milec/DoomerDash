@@ -17,6 +17,8 @@ export interface ScheduledController {
 
 export interface Env {
   ASSETS: Fetcher;
+  /** This Worker, bound to itself, so the cron can fan out one invocation per source. */
+  SELF?: Fetcher;
   SUPABASE_URL: string;
   /** Publishable/anon key. Read path only; granted SELECT on the public views. */
   SUPABASE_PUBLISHABLE_KEY: string;
