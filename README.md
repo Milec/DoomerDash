@@ -1,5 +1,7 @@
 # DoomerDash
 
+**Live: https://doomerdash.mikie-mcconaghy3.workers.dev**
+
 Systemic risk indicators across five failure modes, normalized so they can be
 compared to each other.
 
