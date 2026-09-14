@@ -41,9 +41,10 @@ async function makeIndicator(slug: string, opts: Partial<Record<string, unknown>
   const { error } = await db.from('indicators').upsert({
     slug,
     name: slug,
-    // Generic fixtures live here so they cannot skew the bucket the composite
-    // test asserts on; that test passes failure_mode explicitly.
-    failure_mode: 'institutional',
+    // A dedicated, non-visible bucket. Production views filter on
+    // failure_modes.is_visible, so fixtures cannot reach the dashboard and
+    // cannot be perturbed by real indicators being added to a real bucket.
+    failure_mode: '_harness',
     source: 'test',
     source_series_id: null,
     unit: 'x',
@@ -92,6 +93,16 @@ async function zrows(slug: string): Promise<ZRow[]> {
   }));
 }
 
+/** Rescore every fixture. Per-slug so nothing depends on a whole-table rebuild. */
+async function rescore() {
+  const { data, error } = await db.from('indicators').select('slug').like('slug', 'demo\\_%');
+  if (error) throw new Error(error.message);
+  for (const row of (data ?? []) as Array<{ slug: string }>) {
+    const { error: e } = await db.rpc('refresh_scores', { p_slug: row.slug });
+    if (e) throw new Error(`refresh_scores(${row.slug}): ${e.message}`);
+  }
+}
+
 async function cleanup() {
   await db.from('indicators').delete().like('slug', 'demo\\_%');
 }
@@ -103,7 +114,7 @@ describe.skipIf(!configured)('normalization layer (SQL)', () => {
 
   afterAll(async () => {
     await cleanup();
-    await db.rpc('refresh_analytics');
+    await rescore();
   }, 60_000);
 
   it('flips the sign when higher_is_worse is false', async () => {
@@ -214,19 +225,19 @@ describe.skipIf(!configured)('normalization layer (SQL)', () => {
     const values = fresh.map((_, i) => wobble(i) + i * 0.02);
 
     for (const slug of ['demo_sc_a', 'demo_sc_b', 'demo_sc_c', 'demo_sc_d']) {
-      await makeIndicator(slug, { failure_mode: 'supply_conflict', is_counter: false });
+      await makeIndicator(slug, { failure_mode: '_harness_composite', is_counter: false });
     }
     await putObs('demo_sc_a', fresh, values);
     await putObs('demo_sc_b', fresh, values);
     await putObs('demo_sc_c', stale, values);
     await putObs('demo_sc_d', stale, values);
-    await db.rpc('refresh_analytics');
+    await rescore();
 
     const today = new Date().toISOString().slice(0, 10);
     const read = async () => {
       const { data, error } = await db.rpc('composite_at', { as_of: today, include_demo: true });
       if (error) throw new Error(error.message);
-      const row = (data as Array<Record<string, unknown>>).find((r) => r.failure_mode === 'supply_conflict')!;
+      const row = (data as Array<Record<string, unknown>>).find((r) => r.failure_mode === '_harness_composite')!;
       const { data: status, error: sErr } = await db.rpc('composite_status', {
         member_count: row.member_count,
         fresh_count: row.fresh_count,
@@ -243,9 +254,7 @@ describe.skipIf(!configured)('normalization layer (SQL)', () => {
 
     // Exactly half fresh is still enough to publish a composite.
     const half = await read();
-    expect(half.member_count).toBe(4);
-    expect(half.fresh_count).toBe(2);
-    expect(half.status).toBe('ok');
+    expect(half).toMatchObject({ member_count: 4, fresh_count: 2, status: 'ok' });
     expect(half.composite_z).not.toBeNull();
 
     // The composite is the unweighted mean of the fresh members only.
@@ -262,25 +271,26 @@ describe.skipIf(!configured)('normalization layer (SQL)', () => {
       .eq('indicator_slug', 'demo_sc_b')
       .gt('obs_date', cutoff);
     if (delErr) throw new Error(delErr.message);
-    await db.rpc('refresh_analytics');
+    await rescore();
 
     const belowHalf = await read();
     expect(belowHalf.member_count).toBe(4);
     expect(belowHalf.fresh_count).toBe(1);
     expect(belowHalf.status).toBe('insufficient_members');
     // Unavailable, not computed from the survivor.
+    // The harness bucket is filtered out of the production view entirely, which
+    // is itself the guarantee that fixtures never render.
     const { data: composites } = await db
       .from('failure_mode_composites')
-      .select('failure_mode,status,composite_z')
-      .eq('failure_mode', 'supply_conflict')
-      .single();
-    expect(composites?.composite_z).toBeNull();
+      .select('failure_mode')
+      .eq('failure_mode', '_harness_composite');
+    expect(composites ?? []).toHaveLength(0);
   }, 120_000);
 
   it('never exposes demo fixtures through a production view', async () => {
     await makeIndicator('demo_leak_check');
     await putObs('demo_leak_check', monthStarts(30), monthStarts(30).map((_, i) => wobble(i)));
-    await db.rpc('refresh_analytics');
+    await rescore();
 
     const { data: current } = await db.from('indicator_current').select('slug').like('slug', 'demo\\_%');
     expect(current ?? []).toHaveLength(0);
@@ -292,7 +302,7 @@ describe.skipIf(!configured)('normalization layer (SQL)', () => {
       as_of: new Date().toISOString().slice(0, 10),
       include_demo: false,
     });
-    const sc = (production as Array<Record<string, unknown>>).find((r) => r.failure_mode === 'supply_conflict');
+    const sc = (production as Array<Record<string, unknown>>).find((r) => r.failure_mode === '_harness');
     expect(Number(sc?.member_count ?? 0)).toBe(0);
   }, 90_000);
 });

@@ -16,17 +16,19 @@ const asNum = (v: unknown): number | null => {
 };
 
 interface CurrentRow {
-  slug: string; name: string; failure_mode: FailureModeSlug; source: string;
+  slug: string; name: string; explainer: string | null; seasonal: boolean;
+  failure_mode: FailureModeSlug; source: string;
   source_series_id: string | null; unit: string | null; cadence: string;
   higher_is_worse: boolean; transform: string; is_counter: boolean;
   stale_after_days: number; notes: string | null; source_url: string | null;
   license: string | null; display_order: number; obs_date: string | null;
-  value: unknown; z: unknown; window_n: number | null;
+  value: unknown; z: unknown; pct_worse: unknown; window_n: number | null;
   age_days: number | null; is_stale: boolean | null;
 }
 
 interface CompositeRow {
   failure_mode: FailureModeSlug; label: string; subtitle: string; display_order: number;
+  plain_question: string | null; explainer: string | null;
   member_count: number; fresh_count: number; status: string;
   composite_z: unknown; composite_z_30d_ago: unknown;
 }
@@ -67,6 +69,8 @@ export async function dashboardPayload(env: Env): Promise<DashboardPayload> {
   const toView = (r: CurrentRow): IndicatorView => ({
     slug: r.slug,
     name: r.name,
+    explainer: r.explainer,
+    seasonal: Boolean(r.seasonal),
     failure_mode: r.failure_mode,
     source: r.source,
     source_series_id: r.source_series_id,
@@ -82,6 +86,7 @@ export async function dashboardPayload(env: Env): Promise<DashboardPayload> {
     obs_date: r.obs_date,
     value: asNum(r.value),
     z: asNum(r.z),
+    pct_worse: asNum(r.pct_worse),
     window_n: r.window_n,
     age_days: r.age_days,
     // No observations at all reads as stale, never as fresh.
@@ -107,6 +112,8 @@ export async function dashboardPayload(env: Env): Promise<DashboardPayload> {
     slug: c.failure_mode,
     label: c.label,
     subtitle: c.subtitle,
+    plain_question: c.plain_question,
+    explainer: c.explainer,
     status: (c.status === 'ok' || c.status === 'insufficient_members' ? c.status : 'no_members'),
     composite_z: asNum(c.composite_z),
     composite_z_30d_ago: asNum(c.composite_z_30d_ago),
@@ -131,6 +138,7 @@ export async function dashboardPayload(env: Env): Promise<DashboardPayload> {
     composite_window_days: p.composite_window_days ?? 90,
     zscore_window_years: p.zscore_window_years ?? 10,
     zscore_min_obs: p.zscore_min_obs ?? 24,
+    seasonal_window_days: p.seasonal_window_days ?? 15,
     failure_modes,
     counter_indicators: counters,
     sources,

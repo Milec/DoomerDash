@@ -23,6 +23,8 @@ export interface Env {
   /** Service role key. Write path only; never used to serve a browser request. */
   SUPABASE_SERVICE_KEY: string;
   FRED_API_KEY: string;
+  /** EIA API v2 key: https://www.eia.gov/opendata/register.php */
+  EIA_API_KEY: string;
   INGEST_TOKEN: string;
 }
 

@@ -3,6 +3,7 @@ import type { DashboardPayload } from '../shared/types.ts';
 import CompositeCard from './components/CompositeCard.tsx';
 import CounterStrip from './components/CounterStrip.tsx';
 import Footer from './components/Footer.tsx';
+import HowToRead from './components/HowToRead.tsx';
 import IndicatorRow from './components/IndicatorRow.tsx';
 import { formatTimestamp } from './lib/format.ts';
 
@@ -57,6 +58,7 @@ export default function App() {
 
   return (
     <Shell>
+      <HowToRead data={data} />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {data.failure_modes.map((mode) => (
           <CompositeCard
@@ -70,16 +72,22 @@ export default function App() {
 
       {expanded && (
         <section className="mt-3 overflow-hidden rounded-lg border border-white/15 bg-surface">
-          <header className="flex flex-wrap items-baseline justify-between gap-2 px-3 pt-3 pb-1">
-            <h3 className="text-[12px] font-semibold text-ink">{expanded.label} · members</h3>
-            <p className="text-[11px] text-ink-muted">
-              positive z = worse · greyed rows are past their staleness threshold
-            </p>
+          <header className="px-3 pt-3 pb-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 className="text-[12px] font-semibold text-ink">{expanded.label}</h3>
+              <p className="text-[11px] text-ink-muted">
+                higher = worse · greyed rows are out of date
+              </p>
+            </div>
+            {expanded.explainer && (
+              <p className="mt-1.5 max-w-4xl text-[11.5px] leading-relaxed text-ink-2">
+                {expanded.explainer}
+              </p>
+            )}
           </header>
           {expanded.members.length === 0 ? (
             <p className="border-t border-line px-3 py-6 text-[12px] text-ink-muted">
-              No indicators in this bucket yet. Phase 1 covers FRED only, which reaches the fiscal
-              and credit buckets; the rest arrive with the Phase 2 connectors.
+              No measures are wired up for this group yet.
             </p>
           ) : (
             expanded.members.map((ind) => <IndicatorRow key={ind.slug} ind={ind} />)
@@ -101,8 +109,8 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-page px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[15px] font-semibold tracking-tight text-ink">DoomerDash</h1>
-        <p className="text-[11px] text-ink-muted">
-          Systemic risk, z-scored against its own history. Positive is worse.
+        <p className="max-w-xl text-[11px] leading-snug text-ink-muted">
+          Five ways things break, each measured against its own history. Higher always means worse.
         </p>
       </header>
       <main className="mx-auto max-w-[1600px]">{children}</main>

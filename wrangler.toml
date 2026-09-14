@@ -11,7 +11,9 @@ SUPABASE_URL = "https://oeekgxtqstyiudimglts.supabase.co"
 # Secrets (set with `wrangler secret put <NAME>`):
 #   SUPABASE_PUBLISHABLE_KEY  read path; only granted SELECT on the public views
 #   SUPABASE_SERVICE_KEY      write path; used by ingest only
-#   FRED_API_KEY              https://fred.stlouisfed.org/docs/api/api_key.html
+
+
+#   EIA_API_KEY               https://www.eia.gov/opendata/register.php
 #   INGEST_TOKEN              bearer token guarding POST /api/ingest
 
 [assets]

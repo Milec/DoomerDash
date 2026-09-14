@@ -10,9 +10,14 @@ distribution**, direction-normalized so that **positive always means worse**.
 Raw values are secondary. The dashboard answers one question per panel: *is this
 getting worse relative to its own history?*
 
-**Phase 1 is FRED-only** — twelve indicators plus three counter-indicators, end
-to end, deployed. Phase 2 sources are stubbed at the connector interface and
-nothing else.
+**Phase 2 is live.** 32 indicators across six sources — FRED, EIA, IMF
+PortWatch, NOAA/NSIDC, FAO and USBR — filling all five failure modes.
+
+Every reading is shown twice: as a plain sentence ("worse than 94% of the past
+decade") and as a score for people who want one. The percentile is the empirical
+rank inside the indicator's own trailing window, not a normal-curve conversion of
+the z-score — these distributions are skewed and fat-tailed, and pushing z
+through a normal CDF would quietly invent a number.
 
 ---
 
@@ -68,10 +73,11 @@ secret:
 wrangler secret put SUPABASE_PUBLISHABLE_KEY   # read path
 wrangler secret put SUPABASE_SERVICE_KEY       # write path, ingest only
 wrangler secret put FRED_API_KEY               # fred.stlouisfed.org/docs/api/api_key.html
+wrangler secret put EIA_API_KEY                # eia.gov/opendata/register.php
 wrangler secret put INGEST_TOKEN               # bearer guarding POST /api/ingest
 ```
 
-For local work put the same four in `.dev.vars` (gitignored; `.dev.vars.example`
+For local work put the same five in `.dev.vars` (gitignored; `.dev.vars.example`
 is the template). Node scripts and tests read `.dev.vars` too, so there is one
 place to set them.
 
@@ -175,18 +181,28 @@ changes if you want them different.
    `zscore_min_obs()`, widening `zscore_window_years()` for annual cadence, or
    accepting that annual series are context rather than signal.
 
-### Performance
+### Performance, and a bug worth remembering
 
-Scoring is materialized. `indicator_zscores_mv` is rebuilt by
-`refresh_analytics()` after every ingest, and the API reads only the snapshot —
-a single page load never runs the windowed percentile query. `analytics_status`
-exposes the rebuild timestamp, which the footer displays, so a stale snapshot is
-visible rather than silent.
+Scoring is precomputed into the `indicator_scores` table. Ingest calls
+`refresh_scores(slug)` for each indicator as its rows land, so no page load ever
+runs the windowed percentile query. `analytics_status` exposes the last rebuild
+time, which the footer shows, so a stale snapshot is visible rather than silent.
+
+This started as a materialized view rebuilt in one statement. Once Phase 2
+tripled the row count that statement exceeded PostgREST's 8s cap, and
+`SET LOCAL statement_timeout` inside the refresh function could not help — the
+timer belongs to the statement already executing the function, so raising it
+mid-flight does nothing. The failure was silent: ingest reported success, scores
+never rebuilt, and the dashboard would have frozen at its last computed values
+while still looking live. Per-indicator rescoring means there is no long-running
+statement anywhere, and a slow source cannot stop the others being scored.
+Nothing here should reintroduce a whole-database rebuild on a request path.
 
 For a single indicator call `zscores('slug')`. Do **not** filter
 `indicator_zscores` by slug: its `windowed` CTE is referenced twice and therefore
-materialized, which fences off predicate push-down and rescores every indicator
-in the database.
+materialized, which fences off predicate push-down and rescores everything.
+
+    npm run rescore    # rescore every indicator, one at a time
 
 ---
 
@@ -227,44 +243,65 @@ rather than a TypeScript reimplementation that could drift from it. They cover
 sign flipping, winsorization, insufficient-history handling, the stale-composite
 rule at its exact boundary, and demo-fixture isolation. No UI tests.
 
-Fixtures are created and torn down under the `demo_` prefix. Set `SUPABASE_URL`
-and `SUPABASE_SERVICE_KEY` (in `.dev.vars` or the environment) or the suite skips.
+Fixtures are created and torn down under the `demo_` prefix, inside two
+`is_visible = false` failure modes that production views filter out. They
+originally borrowed `supply_conflict` because it happened to be empty; Phase 2
+filled it and the tests broke, correctly. Test isolation is now a property of the
+schema rather than a coincidence about which buckets are empty.
+
+Set `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (in `.dev.vars` or the environment)
+or the suite skips.
 
 ---
 
-## Phase 2
+## Phase 2: what shipped
 
-Stubbed at `worker/connectors/registry.ts`. Each source is a module exporting
-`fetchSeries(indicator, ctx)`; adding one is a new file plus one line in the
-factory table. Planned, in rough value order:
+| Source | Key | Indicators |
+|---|---|---|
+| **FRED** | yes | 18 — rates, spreads, inflation, labour, plus the NY Fed ACM term premium and two policy-uncertainty indices |
+| **EIA v2** | yes | 5 — SPR level, retail diesel, crude and distillate stocks, and the **derived** diesel crack spread |
+| **IMF PortWatch** | no | 4 — daily transits through Hormuz, Suez, Bab el-Mandeb and Panama |
+| **NOAA / NSIDC** | no | 2 — Mauna Loa CO₂, Arctic sea ice extent |
+| **USBR** | no | 2 — Lake Mead and Lake Powell storage |
+| **FAO** | no | 1 — Food Price Index |
 
-- **IMF PortWatch** (ArcGIS REST, no key) — daily transit counts for Hormuz,
-  Suez, Bab el-Mandeb, Panama. The highest-value non-FRED source on the list and
-  it is free.
-- **EIA API v2** — SPR level, diesel retail, distillate and crude stocks. The
-  diesel crack spread is *derived* from products and crude, not fetched.
-- **NY Fed ACM term premium** — CSV.
-- **NOAA / NSIDC** — Mauna Loa CO2, daily global SST, Arctic sea ice extent.
-  Also the replacement for the discontinued CO2 series noted below.
-- **FAO Food Price Index** and **USDA WASDE** stocks-to-use — CSV.
-- **USBR** — Lake Mead and Powell storage (Reclamation HDB).
-- **ACLED** — registration required; check the license before shipping publicly.
-- **State DOI / FAIR plan policy counts** — no API. Needs the authenticated CSV
-  import route, which is Phase 2 work; `cadence = 'manual'` already exists in the
-  schema for it.
+The NY Fed ACM term premium needed no connector at all: FRED publishes it as
+`THREEFYTP10`, so it was a database insert. That is the connector interface
+working as intended.
 
-Three of the five failure modes have no members until these land, and the
-dashboard says so explicitly rather than rendering an empty card as if it were a
-reading of zero.
+### Seasonal comparison
 
-### Known upstream data issues
+Arctic sea ice, reservoir storage and fuel stockpiles swing enormously with the
+calendar. Scoring September sea ice against a full ten-year window measures *it
+is September*, not *this is unusual*. Indicators flagged `seasonal` are compared
+against the same time of year instead — every observation within ±15 days-of-year
+across the window. Rows say so in the UI. It is still the indicator's own
+history, just the part of it that is comparable.
 
-- `EMISSCO2TOTVTTTOUSA` (feeding `co2_per_gdp`) is **discontinued upstream** —
-  last observation 2021-01-01. It renders heavily stale by design until NOAA or
-  another feed replaces it.
-- `net_interest_receipts` divides federal interest payments by federal current
-  **tax** receipts (`W006RC1Q027SBEA`), not total receipts. The ratio is
-  correspondingly higher than an interest-to-total-receipts measure.
+### Deliberately not shipped
+
+- **ACLED** — registration required, and its licence does not permit
+  redistributing the data from a public URL. Left out rather than shipped in
+  breach of terms. The spec said to check before exposing it publicly; this is
+  the result of checking.
+- **Daily global sea surface temperature** — the usual free feed (Climate
+  Reanalyzer's `oisst2.1` JSON) stopped updating in September 2024, and its other
+  filenames now redirect to the site root. Shipping a series two years behind as
+  a daily indicator is precisely the failure this dashboard exists to avoid, so
+  it needs a live replacement first.
+- **USDA WASDE stocks-to-use** — the PSD API needs its own key and the only
+  keyless path is a 2.8 MB zip, which would mean adding a decompression
+  dependency. Better suited to the manual CSV route.
+- **The authenticated CSV import route** — still unbuilt. `cadence = 'manual'`
+  exists in the schema for it.
+
+### A caveat on the Institutional bucket
+
+Its two members (`policy_uncertainty`, `equity_uncertainty`) share a
+methodology and authorship, so they are correlated: the bucket is effectively one
+signal measured twice, and its composite should be read as weaker evidence than a
+bucket of six independent measures. Better institutional indicators are the most
+valuable thing to add next.
 
 ---
 

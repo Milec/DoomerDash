@@ -1,30 +1,43 @@
 import type { Connector } from './types.ts';
 import type { Env } from '../env.d.ts';
 import { createFredConnector } from './fred.ts';
+import { createEiaConnector } from './eia.ts';
+import { createPortwatchConnector } from './portwatch.ts';
+import { createNoaaConnector } from './noaa.ts';
+import { createFaoConnector } from './fao.ts';
+import { createUsbrConnector } from './usbr.ts';
 
 /**
  * Sources that have a working connector. Each entry is a factory so that every
  * ingest run gets a fresh instance with its own request cache and throttle state.
  *
- * Phase 2 plugs in here and nowhere else. Each of these is a new module exporting
- * a Connector, plus one line in this table:
+ * Adding an indicator to a source listed here is a database insert and nothing
+ * else. Adding a new source is a module exporting a Connector plus one line
+ * below.
  *
- *   eia        EIA API v2 (key)      SPR level, diesel retail, distillate + crude
- *                                    stocks. The diesel crack spread is derived
- *                                    from products and crude, not fetched.
- *   portwatch  IMF PortWatch (open)  daily transit counts: Hormuz, Suez,
- *                                    Bab el-Mandeb, Panama.
- *   nyfed      ACM term premium      CSV download.
- *   noaa       NOAA / NSIDC          Mauna Loa CO2, global SST, Arctic sea ice.
- *   fao        FAO Food Price Index  CSV; USDA WASDE stocks-to-use.
- *   usbr       Reclamation HDB       Lake Mead and Lake Powell storage.
- *   acled      ACLED (registration)  check redistribution terms before shipping.
+ * Deliberately absent:
+ *
+ *   acled   Registration required, and its licence does not permit
+ *           redistributing the data from a public URL. Left out of the public
+ *           build rather than shipped in breach of terms.
+ *   sst     Daily global sea surface temperature. The usual free feed (Climate
+ *           Reanalyzer oisst2.1 JSON) stopped updating in September 2024 and
+ *           its other filenames redirect to the site root. Needs a live
+ *           replacement before it is worth wiring.
+ *   usda    WASDE grain stocks-to-use. The PSD API needs its own key and the
+ *           only keyless path is a 2.8MB zip, which would mean adding a
+ *           decompression dependency. Suited to the manual CSV route instead.
  *
  * `cadence = 'manual'` indicators intentionally have no connector: they arrive
  * through an authenticated CSV import route.
  */
 const FACTORIES: Record<string, () => Connector> = {
   fred: createFredConnector,
+  eia: createEiaConnector,
+  portwatch: createPortwatchConnector,
+  noaa: createNoaaConnector,
+  fao: createFaoConnector,
+  usbr: createUsbrConnector,
 };
 
 export const CONNECTOR_SOURCES = Object.keys(FACTORIES);
@@ -44,7 +57,10 @@ export function apiKeyForSource(source: string, env: Env): string | undefined {
   switch (source) {
     case 'fred':
       return env.FRED_API_KEY;
+    case 'eia':
+      return env.EIA_API_KEY;
     default:
+      // portwatch, noaa, fao and usbr are all open data with no key.
       return undefined;
   }
 }

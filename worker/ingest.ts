@@ -92,6 +92,14 @@ export async function ingestSource(source: string, env: Env): Promise<IngestResu
           written += rows.length;
         }
         totalRows += written;
+
+        // Rescore this indicator immediately, while its rows are the only thing
+        // that changed. One small statement per indicator: a whole-database
+        // rebuild does not fit inside a request budget, and a slow source must
+        // not stop the others from being scored.
+        const { error: scoreError } = await db.rpc('refresh_scores', { p_slug: indicator.slug });
+        if (scoreError) throw new Error(`scored 0 rows: ${scoreError.message}`);
+
         outcomes.push({ slug: indicator.slug, rows: written });
       } catch (err) {
         outcomes.push({ slug: indicator.slug, rows: 0, error: message(err) });
@@ -120,12 +128,6 @@ export async function ingestSource(source: string, env: Env): Promise<IngestResu
     .update({ finished_at: finishedAt, status, rows_upserted: totalRows, error_text: errorText })
     .eq('id', runId);
 
-  // Rebuild the z-score snapshot even on a partial run: the rows that did land
-  // should be scored. Failure here is recorded but does not change run status.
-  if (status !== 'error') {
-    const { error } = await db.rpc('refresh_analytics');
-    if (error) console.error(`refresh_analytics failed after ${source}: ${error.message}`);
-  }
 
   return {
     source,
