@@ -263,3 +263,41 @@ reading of zero.
 - `net_interest_receipts` divides federal interest payments by federal current
   **tax** receipts (`W006RC1Q027SBEA`), not total receipts. The ratio is
   correspondingly higher than an interest-to-total-receipts measure.
+
+---
+
+## Access boundary
+
+The publishable key the Worker reads with is public by design, so it is treated
+as public: it reaches exactly seven views and nothing else. Verified directly
+against PostgREST with that key:
+
+| Reachable with the publishable key | Denied |
+|---|---|
+| `indicator_current` | `observations`, `indicators`, `failure_modes` |
+| `indicator_sparkline` | `ingest_runs`, `analytics_meta` |
+| `indicator_spark_window` | `indicator_zscores`, `indicator_zscores_mv` |
+| `failure_mode_composites` | `failure_mode_composite_history` |
+| `ingest_status` | `rpc/refresh_analytics`, `rpc/zscores` |
+| `normalization_policy` | `rpc/composite_at` |
+| `analytics_status` | |
+| `rpc/composite_at_public` (production data only) | |
+
+Two things that bit during setup and are worth knowing before editing
+`migrations/0006`–`0007`:
+
+- `revoke execute ... from anon, authenticated` **does nothing**. Postgres grants
+  `EXECUTE` to `PUBLIC` on `CREATE FUNCTION` and both roles inherit it. The
+  revoke has to name `PUBLIC`. Until it did, `refresh_analytics()` was callable
+  by anyone holding the publishable key — a free trigger for an expensive
+  rebuild.
+- A view with `security_invoker = false` runs **table** access as its owner, but
+  **function** `EXECUTE` is still checked against the calling role. That is why
+  `failure_mode_composites` needs `composite_at_public` — a wrapper with
+  `include_demo` pinned to false — rather than `composite_at` itself.
+
+Supabase's linter reports `security_definer_view` for the seven views and
+`rls_enabled_no_policy` for the base tables. Both are the intended design: the
+views are the access boundary and expose only data the dashboard publishes, and
+the base tables carry RLS with no policies precisely so that nothing reaches them
+except the service role.

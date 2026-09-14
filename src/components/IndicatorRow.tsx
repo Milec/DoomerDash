@@ -9,7 +9,7 @@ export default function IndicatorRow({ ind }: { ind: IndicatorView }) {
 
   return (
     <div
-      className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 border-t border-line px-3 py-3 sm:grid-cols-[minmax(0,2fr)_5rem_minmax(0,1fr)_7rem_minmax(0,9rem)] sm:gap-x-4 ${ind.is_stale ? 'stale' : ''}`}
+      className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 border-t border-line px-3 py-3 sm:grid-cols-[minmax(0,1.4fr)_5rem_8rem_8.5rem_minmax(0,1fr)] sm:gap-x-4 ${ind.is_stale ? 'stale' : ''}`}
     >
       {/* name + source link */}
       <div className="min-w-0">
