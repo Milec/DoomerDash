@@ -47,47 +47,42 @@ export default function HowToRead({ data }: { data: DashboardPayload }) {
       {open && (
         <div className="grid gap-5 border-t border-line px-4 py-4 text-[12px] leading-relaxed text-ink-2 lg:grid-cols-3">
           <div>
-            <h3 className="mb-1.5 text-[12px] font-semibold text-ink">Every number is compared to its own past</h3>
+            <h3 className="mb-1.5 text-[12px] font-semibold text-ink">Read each measure in context</h3>
             <p>
-              Comparing an oil price to an unemployment rate directly would be meaningless - they
-              are not the same kind of thing. So each measure is asked the same question instead:
-              <em className="text-ink"> how unusual is this right now, compared with its own normal
-              range over the last {data.zscore_window_years} years?</em>
+              Oil prices and unemployment are different kinds of data, so the dashboard does not
+              compare their raw numbers. Instead, it asks: <em className="text-ink">how unusual is
+              this reading compared with the last {data.zscore_window_years} years?</em>
             </p>
             <p className="mt-2">
-              That is why a row says something like &ldquo;worse than 94% of the past decade&rdquo;.
-              It means only 6% of the time in the last ten years was this measure in worse shape
-              than it is today.
+              &ldquo;Worse than 94% of the past decade&rdquo; means this measure has been under more pressure
+              only 6% of the time in that period.
             </p>
           </div>
 
           <div>
-            <h3 className="mb-1.5 text-[12px] font-semibold text-ink">Positive always means worse</h3>
+            <h3 className="mb-1.5 text-[12px] font-semibold text-ink">One direction throughout</h3>
             <p>
-              Some things are bad when they rise (inflation, borrowing costs). Others are bad when
-              they fall (water in reservoirs, cash in the banking system, ships passing through a
-              canal). Those are flipped, so you never have to remember which way round each one
-              goes. Higher score, redder colour, worse situation - everywhere on the page.
+              Inflation and borrowing costs are bad when they rise. Reservoir levels and shipping
+              traffic are bad when they fall. The latter are reversed, so higher scores and warmer
+              colours always point to more stress.
             </p>
             <p className="mt-2">
-              The smaller <span className="tnum text-ink">score</span> next to each reading is a
-              standard deviation: 0 is typical, +1 is worse than usual, +2 is much worse.
+              The smaller <span className="tnum text-ink">score</span> shows the size of the move:
+              0 is typical, +1 is above normal, and +2 is far above normal.
             </p>
           </div>
 
           <div>
-            <h3 className="mb-1.5 text-[12px] font-semibold text-ink">What is deliberately not done</h3>
+            <h3 className="mb-1.5 text-[12px] font-semibold text-ink">What the dashboard leaves alone</h3>
             <p>
-              Nothing is estimated or filled in. If a source skips a day, the gap stays a gap.
-              Anything older than it should be is <span className="stale inline-block px-1 text-ink">greyed out</span>{' '}
-              with its age shown, because quarterly data presented as if it were live is worse than
-              no data at all.
+              Missing data is never filled in. If a source skips a day, the gap remains. Old data
+              is <span className="stale inline-block px-1 text-ink">faded</span> and dated so it is
+              not mistaken for a live reading.
             </p>
             <p className="mt-2">
-              Measures with a natural yearly rhythm - sea ice, reservoirs, fuel stockpiles - are
-              compared against <em className="text-ink">the same time of year</em>, so
-              &ldquo;it&rsquo;s September&rdquo; never gets mistaken for &ldquo;something is
-              wrong&rdquo;. Those rows say so.
+              Seasonal measures—such as sea ice, reservoirs, and fuel stockpiles—are compared with
+              <em className="text-ink">the same time of year</em>. Normal seasonal swings do not
+              count as a warning.
             </p>
           </div>
         </div>

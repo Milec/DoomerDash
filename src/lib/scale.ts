@@ -43,7 +43,7 @@ export const zColor = (z: number | null | undefined): string => TOKENS[zTone(z)]
  * being taught anything first.
  */
 export function plainReading(pct: number | null, seasonal = false): string {
-  if (pct === null || !Number.isFinite(pct)) return 'Not enough history to score';
+  if (pct === null || !Number.isFinite(pct)) return 'Not enough history for a score';
   const against = seasonal ? 'at this time of year' : 'of the past decade';
   const r = Math.round(pct);
   if (r >= 50) return `Worse than ${r}% ${against}`;

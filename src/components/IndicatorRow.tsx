@@ -33,7 +33,7 @@ export default function IndicatorRow({ ind }: { ind: IndicatorView }) {
         <div className="min-w-0">
           {unscored ? (
             <div className="text-[12px] leading-snug text-ink-muted">
-              Not enough history to score
+              Not enough history for a score
               <span className="tnum"> (n={ind.window_n ?? 0})</span>
             </div>
           ) : (
@@ -58,7 +58,7 @@ export default function IndicatorRow({ ind }: { ind: IndicatorView }) {
           <div className="tnum">{formatDate(ind.obs_date)}</div>
           <div className={ind.is_stale ? 'font-medium text-ink-2' : ''}>
             {formatAge(ind.age_days)}
-            {ind.is_stale && ` · out of date`}
+            {ind.is_stale && ` · needs an update`}
           </div>
         </div>
 
