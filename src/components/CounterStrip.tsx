@@ -12,13 +12,12 @@ export default function CounterStrip({ items }: { items: IndicatorView[] }) {
   return (
     <section className="mt-8 rounded-lg border border-white/10 bg-surface/60 px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-[12px] font-semibold tracking-tight text-ink-2">Things that are going right</h2>
-        <p className="text-[11px] text-ink-muted">Kept out of every combined score, so they cannot flatter it</p>
+        <h2 className="text-[12px] font-semibold tracking-tight text-ink-2">Signs of progress</h2>
+        <p className="text-[11px] text-ink-muted">Shown separately from the group scores</p>
       </div>
       <p className="mt-1.5 max-w-3xl text-[11px] leading-relaxed text-ink-muted">
-        A board that only tracks what is deteriorating will always look like a crisis. These are
-        here as a deliberate counterweight - measured the same way, on the same scale, and shown
-        whether they help the story or not.
+        A useful dashboard shows improvements as well as problems. These measures use the same
+        scale, but do not affect any group score.
       </p>
       <ul className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((ind) => (
@@ -33,7 +32,7 @@ export default function CounterStrip({ items }: { items: IndicatorView[] }) {
               <div className="shrink-0 text-right">
                 {ind.z === null ? (
                   <div className="text-[10px] leading-tight text-ink-muted">
-                    too short
+                    not enough data
                     <br />
                     <span className="tnum">n={ind.window_n ?? 0}</span>
                   </div>
